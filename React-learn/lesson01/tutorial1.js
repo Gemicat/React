@@ -1,15 +1,58 @@
+// 外部容器
 var CommentBox = React.createClass({
+    loadCommentsFromServer: function() {
+        $.ajax({
+            url: this.props.url,
+            dataType: 'json',
+            cache: false,
+            success: function(res) {
+                this.setState({data: res});
+            }.bind(this),
+            error: function(xhr, status, err) {
+                console.error(this.props.url, status, err.toString());
+            }.bind(this)
+        });
+    },
+
+    handleCommentSubmit: function(comment) {
+        var comments = this.state.data;
+        var newComments = comments.concat(comment);
+        this.setState({data: newComments});
+        $.ajax({
+            url: this.props.url,
+            type: 'post',
+            data: comment,
+            dataType: 'json',
+            success: function(res) {
+                this.serState({data: res});
+            }.bind(this),
+            error: function(xhr, status, err)  {
+                console.error(this.props.url, status, err.toString());
+            }.bind(this)
+        });
+    },
+
+    getInitialState: function() {
+        return {data: []};
+    },
+
+    componentDidMount: function() {
+        this.loadCommentsFromServer();
+        setInterval(this.loadCommentsFromServer, this.props.pollInterval);
+    },
+
     render: function() {
         return (
             <div className="commentBox">
                 <h1>commentBox</h1>
-                <CommentList data={this.props.data}/>
-                <CommentForm />
+                <CommentList data={this.state.data}/>
+                <CommentForm onCommentSubmit={this.handleCommentSubmit}/>
             </div>
         );
     }
 });
 
+// 列表
 var CommentList = React.createClass({
     render: function() {
         var commentNodes = this.props.data.map(function(comment) {
@@ -25,16 +68,36 @@ var CommentList = React.createClass({
     }
 })
 
+
+// 表单
 var CommentForm = React.createClass({
+    handleSubmit: function(e) {
+        e.preventDefault();
+        var author = this.refs.author.value.trim();
+        var text = this.refs.text.value.trim();
+        
+        if(!author || !text) {
+            return;
+        }
+
+        this.props.onCommentSubmit({author:author, text:text});
+        this.refs.author.value = '';
+        this.refs.text.value = '';
+        return;
+    },
+
     render: function() {
         return (
-            <div className="CommentForm">
-                Hello, world! I am a CommentForm.
-            </div>
+            <form className="CommentForm" onSubmit={this.handleSubmit}>
+                <input type="text" placeholder="Your name" ref="author"/>
+                <input type="text" placeholder="Say something..." ref="text"/>
+                <input type="submit" value="Post"/>
+            </form>
         );
     }
 });
 
+// 列表中单条评论
 var Comment = React.createClass({
     rawMarkup: function() {
         var rawMarkup = marked(this.props.children.toString(), {sanitize: true});
@@ -53,13 +116,7 @@ var Comment = React.createClass({
     }
 });
 
-// 本地数据
-var data = [
-    {author: 'Pete Hunt', text: 'This is one comment.'},
-    {author: 'Jordan Walke', text: 'This is *another* comments.'}
-];
-
 ReactDOM.render(
-  <CommentBox data={data}/>,
+  <CommentBox url="/lesson01/api.json" pollInterval={2000}/>,
   document.getElementById('content')
 );
