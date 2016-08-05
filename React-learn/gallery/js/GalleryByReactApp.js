@@ -103,6 +103,9 @@ console.log(imageDatas);
 var ImgFigure = React.createClass({
     render: function() {
         var imgFigureClassName = 'img-figure';
+        var styleObj = {};
+
+        // 如果props
 
         return (
             <figure className={imgFigureClassName}>
